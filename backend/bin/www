@@ -24,13 +24,21 @@ client.connect((err) => {
     logError(err)
     process.exit(2)
   } else {
+    logInfo("Connected to DB")
     db = client.db(dbName)
     app.set("db", db)
     app.set("port", port)
     const server = http.createServer(app)
     server.listen(port)
+  
     server.on("error", onError)
     server.on("listening", onListening)
+    server.on("close", onClose)
+
+    process.on('SIGINT', function() {
+      server.close();
+    });
+    
   }
 })
 
@@ -67,7 +75,11 @@ function onError(error) {
   }
 }
 
+function onClose(){
+  logInfo("Server closing")
+  client.close()
+}
+
 function onListening() {
   logInfo("Server started")
-  logError("Error")
 }
