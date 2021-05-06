@@ -1,85 +1,100 @@
 #!/usr/bin/env node
 
-require("dotenv").config()
+require("dotenv").config();
 
-const { logInfo, logError } = require("../logger")
+fs = require('fs')
+const { logInfo, logError } = require("../logger");
 
-const app = require("../app")
-const http = require("http")
-const port = normalizePort(process.env.PORT || "3000")
+const app = require("../app");
+const http = require("http");
+const port = normalizePort(process.env.PORT || "3000");
 
-const dbUsername = process.env.DB_USERNAME
-const dbPassword = process.env.DB_PASSWORD
-const dbName = process.env.DB_NAME
-const MongoClient = require("mongodb").MongoClient
-const uri = `mongodb+srv://${dbUsername}:${dbPassword}@cluster0.s4l3j.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`
+const dbUsername = process.env.DB_USERNAME;
+const dbPassword = process.env.DB_PASSWORD;
+const dbName = process.env.DB_NAME;
+const MongoClient = require("mongodb").MongoClient;
+const uri = `mongodb+srv://${dbUsername}:${dbPassword}@cluster0.s4l3j.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-})
+});
 
+async function main() {
+  try {
+    await client.connect();
+    logInfo("Connected to DB");
 
-client.connect((err) => {
-  if (err) {
-    logError(err)
-    process.exit(2)
-  } else {
-    logInfo("Connected to DB")
-    db = client.db(dbName)
-    app.set("db", db)
-    app.set("port", port)
-    const server = http.createServer(app)
-    server.listen(port)
-  
-    server.on("error", onError)
-    server.on("listening", onListening)
-    server.on("close", onClose)
+    db = client.db(dbName);
+    await seedIngredients();
 
-    process.on('SIGINT', function() {
+    app.set("db", db);
+    app.set("port", port);
+    const server = http.createServer(app);
+    server.listen(port);
+    server.on("error", onError);
+    server.on("listening", onListening);
+    server.on("close", onClose);
+
+    process.on("SIGINT", function () {
       server.close();
     });
-    
+  } catch (e) {
+    logError(e);
+    process.exit(2);
   }
-})
-
+}
 function normalizePort(val) {
-  const port = parseInt(val, 10)
+  const port = parseInt(val, 10);
 
   if (isNaN(port)) {
-    return val
+    return val;
   }
 
   if (port >= 0) {
-    return port
+    return port;
   }
 
-  return false
+  return false;
 }
 
 function onError(error) {
   if (error.syscall !== "listen") {
-    throw error
+    throw error;
   }
 
-  const bind = typeof port === "string" ? "Pipe " + port : "Port " + port
+  const bind = typeof port === "string" ? "Pipe " + port : "Port " + port;
 
   switch (error.code) {
     case "EACCES":
-      logError(bind + " requires elevated privileges")
-      process.exit(1)
+      logError(bind + " requires elevated privileges");
+      process.exit(1);
     case "EADDRINUSE":
-      logError(bind + " is already in use")
-      process.exit(1)
+      logError(bind + " is already in use");
+      process.exit(1);
     default:
-      throw error
+      throw error;
   }
 }
 
-function onClose(){
-  logInfo("Server closing")
-  client.close()
+function onClose() {
+  logInfo("Server closing");
+  client.close();
 }
 
 function onListening() {
-  logInfo("Server started")
+  logInfo("Server started");
 }
+
+async function seedIngredients() {
+  colinfo = await db.listCollections({name: "ingredients"}).next()
+  if (!colinfo) {
+    path = process.env.INGREDIENTS_SEED_PATH;
+    dataBuffer = fs.readFileSync(path);
+    ingredientsData = JSON.parse(dataBuffer);
+    await db.collection('ingredients').insertMany(ingredientsData);
+    logInfo("Ingredients insreted");
+  }
+  return true
+}
+
+main();
