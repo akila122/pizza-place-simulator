@@ -1,0 +1,9 @@
+const debug = require('debug')
+const info = debug('backend:info')
+const error = debug('backend:error')
+info.log = console.log.bind(console.info)
+error.log = console.log.bind(console.error)
+error.color = 1
+info.color = 2
+module.exports.logInfo = info
+module.exports.logError = error
