@@ -12,7 +12,7 @@ const mongoose = require("mongoose");
 const { port, dbUri, seedPath, ORDERS_LIMIT } = require("../config");
 const { OrderSemaphore, Time } = require("../models");
 
-let timerHandle
+let timerHandle;
 
 async function main() {
   try {
@@ -82,7 +82,10 @@ async function seedIngredients() {
   ingredients = await Ingredient.find({}).exec();
   if (!ingredients.length) {
     const dataBuffer = fs.readFileSync(seedPath);
-    const ingredientsData = JSON.parse(dataBuffer);
+    const ingredientsData = JSON.parse(dataBuffer).map((ingredient) => {
+      ingredient.demand = 0;
+      return ingredient;
+    });
     await Ingredient.collection.insertMany(ingredientsData);
     logInfo("Ingredients insreted");
   }
@@ -113,7 +116,7 @@ async function setupTimes() {
     }
   }, 5000);
   logInfo("Timers setup.");
-  return timerHandle
+  return timerHandle;
 }
 
 main();

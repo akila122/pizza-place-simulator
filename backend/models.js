@@ -20,6 +20,11 @@ const ingredientSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  demand: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
 });
 
 const clientSchema = new mongoose.Schema({
@@ -76,6 +81,12 @@ const orderSchema = new mongoose.Schema(
     patched: {
       type: Boolean,
     },
+    price: {
+      type: Number,
+    },
+    time: {
+      type: Number,
+    },
   },
   {
     timestamps: true,
@@ -108,28 +119,24 @@ const orderDoneSchema = new mongoose.Schema(
   }
 );
 
-const adminSchema = new mongoose.Schema(
-  {
-    username:{
-      type: String,
-      required: true
-    },
-    passwordHash:{
-      type:String,
-    }
-  }
-)
+const adminSchema = new mongoose.Schema({
+  username: {
+    type: String,
+    required: true,
+  },
+  passwordHash: {
+    type: String,
+  },
+});
 
-const timeSchema = new mongoose.Schema(
-  {
-    totalSeconds:{
-      type:Number,
-    },
-    sinceLastStartSeconds:{
-      type:Number
-    }
-  }
-)
+const timeSchema = new mongoose.Schema({
+  totalSeconds: {
+    type: Number,
+  },
+  sinceLastStartSeconds: {
+    type: Number,
+  },
+});
 module.exports.Ingredient = mongoose.model("Ingredient", ingredientSchema);
 module.exports.Order = mongoose.model("Order", orderSchema);
 module.exports.OrderDone = mongoose.model("OrderDone", orderDoneSchema);
@@ -141,11 +148,5 @@ module.exports.OrderSemaphore = mongoose.model(
   "OrderSemaphore",
   orderSemaphoreSchema
 );
-module.exports.Admin = mongoose.model(
-  "Admin",
-  adminSchema
-)
-module.exports.Time = mongoose.model(
-  "Time",
-  timeSchema
-)
+module.exports.Admin = mongoose.model("Admin", adminSchema);
+module.exports.Time = mongoose.model("Time", timeSchema);

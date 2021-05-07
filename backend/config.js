@@ -21,10 +21,31 @@ const SIZE_MEDIUM = "medium"
 const SIZE_LARGE = "large"
 const SIZE_TYPES = [SIZE_SMALL, SIZE_MEDIUM, SIZE_LARGE]
 
+const SIZE_SMALL_PRICE = parseInt(process.env.SIZE_SMALL_PRICE)
+const SIZE_MEDIUM_PRICE = parseInt(process.env.SIZE_MEDIUM_PRICE)
+const SIZE_LARGE_PRICE = parseInt(process.env.SIZE_LARGE_PRICE)
+
+const SIZE_SMALL_TIME = parseInt(process.env.SIZE_SMALL_TIME)
+const SIZE_MEDIUM_TIME = parseInt(process.env.SIZE_MEDIUM_TIME)
+const SIZE_LARGE_TIME = parseInt(process.env.SIZE_LARGE_TIME)
+
 const ORDERS_LIMIT = parseInt(process.env.ORDERS_LIMIT)
 
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET
+
+const PRICE_SIZE_DICT = {
+    small:SIZE_SMALL_PRICE,
+    medium:SIZE_MEDIUM_PRICE,
+    large:SIZE_LARGE_PRICE,
+}
+
+const TIME_SIZE_DICT = {
+    small:SIZE_SMALL_TIME,
+    medium:SIZE_MEDIUM_TIME,
+    large:SIZE_LARGE_TIME
+}
+
 
 module.exports.port = port
 module.exports.dbUri = dbUri
@@ -38,3 +59,6 @@ module.exports.ORDER_CANCELLED = ORDER_CANCELLED
 module.exports.ORDERS_LIMIT = ORDERS_LIMIT
 module.exports.ACCESS_TOKEN_SECRET = ACCESS_TOKEN_SECRET
 module.exports.REFRESH_TOKEN_SECRET = REFRESH_TOKEN_SECRET
+module.exports.PRICE_SIZE_DICT = PRICE_SIZE_DICT
+module.exports.TIME_SIZE_DICT = TIME_SIZE_DICT
+

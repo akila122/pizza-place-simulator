@@ -1,10 +1,16 @@
 const express = require("express");
-const { ORDER_CREATED, ORDER_CANCELLED } = require("../config");
+const {
+  ORDER_CREATED,
+  ORDER_CANCELLED,
+  PRICE_SIZE_DICT,
+  TIME_SIZE_DICT,
+} = require("../config");
 const {
   Order,
   OrderDone,
   OrderSemaphore,
   OrderProcessed,
+  Ingredient,
 } = require("../models");
 const router = express.Router();
 
@@ -46,10 +52,27 @@ router.post("/", async function (req, res, next) {
     if (!orderSemaphore) {
       throw "We are too busy at the momment. Please try again later.";
     }
+    // Kinda bad should be automated on DB level e.g. trigger
+    let price = PRICE_SIZE_DICT[newOrder.size];
+    let time = TIME_SIZE_DICT[newOrder.size];
+
+    
+    console.log(PRICE_SIZE_DICT)
+    for (ingredientId of req.body.ingredients) {
+      let ingredient = await Ingredient.findById(ingredientId).exec();
+      if(!ingredient){
+        throw "Invalid ingredient"
+      }
+      price += ingredient.price;
+      time += ingredient.time;
+    }
+    newOrder.time = time;
+    newOrder.price = price;
     await newOrder.save();
     // CALC TIME
     res.json(newOrder);
   } catch (e) {
+    console.log(e)
     res.status(400);
     res.send(e);
   }
@@ -79,18 +102,9 @@ router.delete("/:orderId", async function (req, res, next) {
       }).exec();
       res.send("Order cancelled");
     } else {
-      order = await OrderProcessed.findOneAndUpdate(
-        { order: { _id: req.params.orderId } },
-        { $set: { status: ORDER_CANCELLED } }
-      ).exec();
-      if (!order) {
-        throw "Order not Found";
-      } else {
-        res.send("Order cancelled");
-      }
+      throw "Order not Found";
     }
   } catch (e) {
-    console.log(e);
     res.status(400);
     res.send(e);
   }
@@ -117,6 +131,13 @@ router.patch("/:orderId", async function (req, res, next) {
       throw "Order not found";
     } else {
       res.send("Order updated");
+      // Kinda bad should be automated on DB level e.g. trigger
+      for (ingredientId of req.body.ingredients) {
+        let ingredient = await Ingredient.findById(ingredientId).exec();
+        order.price += ingredient.price;
+        order.time += ingredient.time;
+      }
+      await order.save()
     }
   } catch (e) {
     res.status(400);
