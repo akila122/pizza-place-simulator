@@ -7,10 +7,9 @@ const {
   OrderProcessed,
 } = require("../models");
 const router = express.Router();
-const authenticateJWT = require("./auth").authenticateJWT
 
 // GET recent orders
-router.get("/", authenticateJWT, async function (req, res, next) {
+router.get("/", async function (req, res, next) {
   let recentOrders = await Order.find({}).exec();
   res.json(
     recentOrders.map((order) => {

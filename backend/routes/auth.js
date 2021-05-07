@@ -23,7 +23,7 @@ router.post("/login", async function (req, res) {
       const accessToken = jwt.sign(
         { username: admin.username },
         ACCESS_TOKEN_SECRET,
-        { expiresIn: "1m" }
+        { expiresIn: "20m" }
       );
       const refreshToken = jwt.sign(
         { username: admin.username },
@@ -75,7 +75,7 @@ router.post("/token", (req, res) => {
     const accessToken = jwt.sign(
       { username: admin.username },
       ACCESS_TOKEN_SECRET,
-      { expiresIn: "1m" }
+      { expiresIn: "20m" }
     );
 
     res.json({

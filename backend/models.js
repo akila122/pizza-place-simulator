@@ -119,6 +119,17 @@ const adminSchema = new mongoose.Schema(
     }
   }
 )
+
+const timeSchema = new mongoose.Schema(
+  {
+    totalSeconds:{
+      type:Number,
+    },
+    sinceLastStartSeconds:{
+      type:Number
+    }
+  }
+)
 module.exports.Ingredient = mongoose.model("Ingredient", ingredientSchema);
 module.exports.Order = mongoose.model("Order", orderSchema);
 module.exports.OrderDone = mongoose.model("OrderDone", orderDoneSchema);
@@ -133,4 +144,8 @@ module.exports.OrderSemaphore = mongoose.model(
 module.exports.Admin = mongoose.model(
   "Admin",
   adminSchema
+)
+module.exports.Time = mongoose.model(
+  "Time",
+  timeSchema
 )

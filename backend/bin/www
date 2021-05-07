@@ -1,16 +1,18 @@
 #!/usr/bin/env node
 
-require("dotenv").config()
+require("dotenv").config();
 
-fs = require("fs")
-const { logInfo, logError } = require("../logger")
+fs = require("fs");
+const { logInfo, logError } = require("../logger");
 
-const app = require("../app")
-const http = require("http")
-const mongoose = require("mongoose")
+const app = require("../app");
+const http = require("http");
+const mongoose = require("mongoose");
 
-const { port, dbUri, seedPath, ORDERS_LIMIT } = require("../config")
-const { OrderSemaphore } = require("../models")
+const { port, dbUri, seedPath, ORDERS_LIMIT } = require("../config");
+const { OrderSemaphore, Time } = require("../models");
+
+let timerHandle
 
 async function main() {
   try {
@@ -19,77 +21,99 @@ async function main() {
       useUnifiedTopology: true,
       useFindAndModify: false,
       useCreateIndex: true,
-    })
-    logInfo("Connected to DB")
+    });
+    logInfo("Connected to DB");
 
-    await seedIngredients()
+    await seedIngredients();
 
-    await setupOrderLimit()
+    await setupOrderLimit();
 
-    const db = mongoose.connection
-    app.set("db", db)
-    app.set("port", port)
-    const server = http.createServer(app)
-    server.listen(port)
-    server.on("error", onError)
-    server.on("listening", onListening)
-    server.on("close", onClose)
+    const db = mongoose.connection;
+    app.set("db", db);
+    app.set("port", port);
+    const server = http.createServer(app);
+    server.listen(port);
+    server.on("error", onError);
+    server.on("listening", onListening);
+    server.on("close", onClose);
 
     process.on("SIGINT", function () {
-      server.close()
-    })
+      server.close();
+    });
+
+    timerHandle = await setupTimes(server);
   } catch (e) {
-    logError(e)
-    process.exit(2)
+    logError(e);
+    process.exit(2);
   }
 }
 
 function onError(error) {
   if (error.syscall !== "listen") {
-    throw error
+    throw error;
   }
 
-  const bind = typeof port === "string" ? "Pipe " + port : "Port " + port
+  const bind = typeof port === "string" ? "Pipe " + port : "Port " + port;
 
   switch (error.code) {
     case "EACCES":
-      logError(bind + " requires elevated privileges")
-      process.exit(1)
+      logError(bind + " requires elevated privileges");
+      process.exit(1);
     case "EADDRINUSE":
-      logError(bind + " is already in use")
-      process.exit(1)
+      logError(bind + " is already in use");
+      process.exit(1);
     default:
-      throw error
+      throw error;
   }
 }
 
 function onClose() {
-  logInfo("Server closing")
-  mongoose.disconnect()
+  logInfo("Server closing");
+  if (timerHandle) clearInterval(timerHandle);
+  mongoose.disconnect();
 }
 
 function onListening() {
-  logInfo("Server started")
+  logInfo("Server started");
 }
 
 async function seedIngredients() {
-  const Ingredient = require("../models").Ingredient
-  ingredients = await Ingredient.find({}).exec()
+  const Ingredient = require("../models").Ingredient;
+  ingredients = await Ingredient.find({}).exec();
   if (!ingredients.length) {
-    const dataBuffer = fs.readFileSync(seedPath)
-    const ingredientsData = JSON.parse(dataBuffer)
-    await Ingredient.collection.insertMany(ingredientsData)
-    logInfo("Ingredients insreted")
+    const dataBuffer = fs.readFileSync(seedPath);
+    const ingredientsData = JSON.parse(dataBuffer);
+    await Ingredient.collection.insertMany(ingredientsData);
+    logInfo("Ingredients insreted");
   }
 }
 
-async function setupOrderLimit(){
-    orderSemaphore = await OrderSemaphore.findOne({}).exec()
-    if (!orderSemaphore){
-      orderSemaphore = new OrderSemaphore({count:ORDERS_LIMIT})
-      await orderSemaphore.save()
-      logInfo("Order semaphore insreted")
-    }
+async function setupOrderLimit() {
+  orderSemaphore = await OrderSemaphore.findOne({}).exec();
+  if (!orderSemaphore) {
+    orderSemaphore = new OrderSemaphore({ count: ORDERS_LIMIT });
+    await orderSemaphore.save();
+    logInfo("Order semaphore insreted");
+  }
 }
 
-main()
+async function setupTimes() {
+  appTime = await Time.findOne({}).exec();
+  if (!appTime) {
+    appTime = new Time({ totalSeconds: 0, sinceLastStartSeconds: 0 });
+    await appTime.save();
+  }
+  appTime.sinceLastStartSeconds = 0;
+  await appTime.save();
+  timerHandle = setInterval(() => {
+    {
+      appTime.totalSeconds += 5;
+      appTime.sinceLastStartSeconds += 5;
+      appTime.save();
+    }
+  }, 5000);
+  logInfo("Timers setup.");
+  return timerHandle
+}
+
+main();
