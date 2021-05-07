@@ -1,5 +1,5 @@
 const express = require("express");
-const { Time, Ingredient } = require("../models");
+const { Time, Ingredient, OrderDone } = require("../models");
 const authenticateJWT = require("./auth").authenticateJWT;
 const router = express.Router();
 
@@ -19,7 +19,7 @@ router.get("/ingredients/top", authenticateJWT, async function (req, res) {
 router.get("/money", authenticateJWT, async function (req, res) {
   money = await OrderDone.aggregate([
     { $match: {} },
-    { $group: { _id: null, money: { $sum: "$order.$price" } } },
+    { $group: { _id: null, money: { $sum: "$order.price" } } },
   ]).exec();
   res.json(money);
 });

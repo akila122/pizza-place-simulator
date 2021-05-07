@@ -22,13 +22,16 @@ async function main() {
       useFindAndModify: false,
       useCreateIndex: true,
     });
+
+    
     logInfo("Connected to DB");
 
     await seedIngredients();
 
     await setupOrderLimit();
 
-    const db = mongoose.connection;
+    const db = mongoose.connection.db;
+    
     app.set("db", db);
     app.set("port", port);
     const server = http.createServer(app);
@@ -37,7 +40,20 @@ async function main() {
     server.on("listening", onListening);
     server.on("close", onClose);
 
+
+    process.once("SIGUSR2", function () {
+      server.close();
+    });
+
     process.on("SIGINT", function () {
+      server.close();
+    });
+
+    process.on("SIGTERM", function () {
+      server.close();
+    });
+
+    process.on("exit", function () {
       server.close();
     });
 
@@ -67,10 +83,10 @@ function onError(error) {
   }
 }
 
-function onClose() {
+async function onClose() {
   logInfo("Server closing");
-  if (timerHandle) clearInterval(timerHandle);
-  mongoose.disconnect();
+  if (timerHandle) clearTimeout(timerHandle);
+  await mongoose.disconnect();
 }
 
 function onListening() {
@@ -108,13 +124,19 @@ async function setupTimes() {
   }
   appTime.sinceLastStartSeconds = 0;
   await appTime.save();
-  timerHandle = setInterval(() => {
+  timeFunction = async () => {
     {
-      appTime.totalSeconds += 5;
-      appTime.sinceLastStartSeconds += 5;
-      appTime.save();
+      timeInvoked = new Date();
+      seconds = (timeInvoked - timeScheduled) / 1000;
+      appTime.totalSeconds += seconds;
+      appTime.sinceLastStartSeconds += seconds;
+      await appTime.save();
+      timeScheduled = new Date();
+      timerHandle = setTimeout(timeFunction, 5000);
     }
-  }, 5000);
+  };
+  timeScheduled = new Date();
+  timerHandle = setTimeout(timeFunction, 5000);
   logInfo("Timers setup.");
   return timerHandle;
 }

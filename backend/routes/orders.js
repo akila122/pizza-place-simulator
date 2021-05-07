@@ -56,12 +56,10 @@ router.post("/", async function (req, res, next) {
     let price = PRICE_SIZE_DICT[newOrder.size];
     let time = TIME_SIZE_DICT[newOrder.size];
 
-    
-    console.log(PRICE_SIZE_DICT)
     for (ingredientId of req.body.ingredients) {
       let ingredient = await Ingredient.findById(ingredientId).exec();
-      if(!ingredient){
-        throw "Invalid ingredient"
+      if (!ingredient) {
+        throw "Invalid ingredient";
       }
       price += ingredient.price;
       time += ingredient.time;
@@ -69,10 +67,17 @@ router.post("/", async function (req, res, next) {
     newOrder.time = time;
     newOrder.price = price;
     await newOrder.save();
-    // CALC TIME
-    res.json(newOrder);
+
+    allOrders = await Order.find({}).sort({ createdAt: "asc" }).exec();
+    let count = 0;
+    let waitTime = 0;
+    for (o of allOrders) {
+      count++;
+      waitTime += o.time;
+      if (o._id == newOrder._id) break;
+    }
+    res.json({count,waitTime});
   } catch (e) {
-    console.log(e)
     res.status(400);
     res.send(e);
   }
@@ -137,7 +142,7 @@ router.patch("/:orderId", async function (req, res, next) {
         order.price += ingredient.price;
         order.time += ingredient.time;
       }
-      await order.save()
+      await order.save();
     }
   } catch (e) {
     res.status(400);

@@ -1,0 +1,169 @@
+#!/usr/bin/env node
+require("dotenv").config();
+const mongoose = require("mongoose");
+const {
+  OrderProcessed,
+  Ingredient,
+  Order,
+  OrderDone,
+  OrderSemaphore,
+} = require("../models");
+const { TIME_SIZE_DICT,MAIL_USER,MAIL_PASS } = require("../config");
+const nodemailer = require('nodemailer');
+
+let coockId = process.env.COOCK_ID;
+let dbUri = process.env.COOCK_DB_URI;
+
+if (!coockId || !dbUri) {
+  console.error("Env not set");
+  process.exit(2);
+}
+
+processAlive = true;
+
+main();
+
+async function main() {
+  try {
+    await mongoose.connect(dbUri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      useFindAndModify: false,
+      useCreateIndex: true,
+    });
+    console.log(`Coock ${coockId} connected to DB`);
+    process.once("SIGUSR2", function () {
+      close();
+    });
+
+    process.on("SIGINT", function () {
+      close();
+    });
+
+    process.on("SIGTERM", function () {
+      close();
+    });
+
+    process.on("exit", function () {
+      close();
+    });
+
+    while (processAlive) {
+      // Old processing stopped
+      let orderProcessed = null;
+
+      if (!orderProcessed) {
+        orderProcessed = await OrderProcessed.findOne({
+          coockId: coockId,
+        }).exec();
+      }
+
+      // Try to take new one
+      if (!orderProcessed) {
+        orderProcessed = await getOrder();
+      }
+
+      // Rest a bit
+      if (!orderProcessed) {
+        console.log(`Coock ${coockId} is idle.`);
+        await sleep(5000);
+        continue;
+      }
+
+      let sleepTime =
+        orderProcessed.itemProcessed == 0
+          ? TIME_SIZE_DICT[orderProcessed.order.size]
+          : 0;
+      if (orderProcessed.order.ingredients.length) {
+        let itemProcessed = orderProcessed.itemProcessed;
+        let ingredient = await Ingredient.findById(
+          orderProcessed.order.ingredients[itemProcessed]
+        ).exec();
+        sleepTime += ingredient.time;
+      }
+      console.log(`Coock ${coockId} processing for ${sleepTime}`);
+      await sleep(sleepTime);
+      orderProcessed.itemProcessed++;
+      await orderProcessed.save();
+      if (
+        orderProcessed.itemProcessed ==
+          orderProcessed.order.ingredients.length ||
+        !orderProcessed.order.ingredients.length
+      ) {
+        await orderDone(orderProcessed);
+        console.log(
+          `Coock ${coockId} has processed order ${orderProcessed._id}`
+        );
+        orderProcessed = null;
+      }
+    }
+    process.exit(0);
+  } catch (e) {
+    console.error(e);
+    process.exit(3);
+  }
+}
+
+async function close() {
+  console.log(`Coock ${coockId} closing`);
+  processAlive = false;
+}
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function getOrder() {
+  let order = await Order.findOneAndDelete(
+    {},
+    { sort: { createdAt: "asc" } }
+  ).exec();
+  if (!order) {
+    return null;
+  } else {
+    let orderProcessed = new OrderProcessed({
+      order: order,
+      coockId: coockId,
+      itemProcessed: 0,
+    });
+    await orderProcessed.save();
+    return orderProcessed;
+  }
+}
+
+async function orderDone(orderProcessed) {
+  let orderDone = new OrderDone({
+    order: orderProcessed.order,
+    coockId: orderProcessed.coockId,
+  });
+  await orderDone.save();
+  await orderProcessed.delete();
+  await OrderSemaphore.findOneAndUpdate({
+    $inc: { count: 1 },
+  }).exec();
+  sendMail(orderProcessed)
+}
+
+function sendMail(orderProcessed){
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: MAIL_USER,
+      pass: MAIL_PASS
+    }
+  });
+  
+  const mailOptions = {
+    from: MAIL_USER,
+    to: orderProcessed.order.client.email,
+    subject: 'Your order is ready',
+    text: JSON.stringify(orderProcessed)
+  };
+  transporter.sendMail(mailOptions, function(error, info){
+    if (error) {
+    console.log(error);
+    } else {
+      console.log('Email sent: ' + info.response);
+    }
+  });
+}

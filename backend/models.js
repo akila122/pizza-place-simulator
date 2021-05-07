@@ -90,10 +90,6 @@ const orderSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    capped: {
-      max: ORDERS_LIMIT,
-      autoIndexId: true,
-    },
   }
 );
 const orderProcessedSchema = new mongoose.Schema(
@@ -102,6 +98,14 @@ const orderProcessedSchema = new mongoose.Schema(
       type: orderSchema,
       required: true,
     },
+    coockId:{
+      type: String,
+      required: true
+    },
+    itemProcessed:{
+      type: Number,
+      required: true
+    }
   },
   {
     timestamps: true,
@@ -112,6 +116,10 @@ const orderDoneSchema = new mongoose.Schema(
     order: {
       type: orderSchema,
       required: true,
+    },
+    coockId:{
+      type: String,
+      required: true
     },
   },
   {
