@@ -9,7 +9,6 @@ const {
   Order,
   OrderDone,
   OrderSemaphore,
-  OrderProcessed,
   Ingredient,
 } = require("../models");
 const router = express.Router();
@@ -63,6 +62,8 @@ router.post("/", async function (req, res, next) {
       }
       price += ingredient.price;
       time += ingredient.time;
+      ingredient.demand ++
+      await ingredient.save()
     }
     newOrder.time = time;
     newOrder.price = price;
@@ -141,6 +142,8 @@ router.patch("/:orderId", async function (req, res, next) {
         let ingredient = await Ingredient.findById(ingredientId).exec();
         order.price += ingredient.price;
         order.time += ingredient.time;
+        ingredient.demand ++
+        await ingredient.save()
       }
       await order.save();
     }
