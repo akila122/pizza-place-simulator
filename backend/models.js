@@ -1,4 +1,9 @@
-const { ORDER_STATES, ORDER_CREATED, SIZE_TYPES, ORDERS_LIMIT } = require("./config");
+const {
+  ORDER_STATES,
+  ORDER_CREATED,
+  SIZE_TYPES,
+  ORDERS_LIMIT,
+} = require("./config");
 const mongoose = require("mongoose");
 
 const ingredientSchema = new mongoose.Schema({
@@ -39,14 +44,12 @@ const clientSchema = new mongoose.Schema({
     required: [true, "Client's address required"],
   },
 });
-const orderSemaphoreSchema = new mongoose.Schema(
-  {
-    count:{
-      type: Number,
-      required: true
-    }
-  }
-)
+const orderSemaphoreSchema = new mongoose.Schema({
+  count: {
+    type: Number,
+    required: true,
+  },
+});
 const orderSchema = new mongoose.Schema(
   {
     client: {
@@ -84,28 +87,50 @@ const orderSchema = new mongoose.Schema(
 );
 const orderProcessedSchema = new mongoose.Schema(
   {
-    order:{
+    order: {
       type: orderSchema,
-      required: true
-    }
+      required: true,
+    },
   },
   {
-    timestamps:true
+    timestamps: true,
   }
-)
+);
 const orderDoneSchema = new mongoose.Schema(
   {
-    order:{
+    order: {
       type: orderSchema,
-      required: true
-    }
+      required: true,
+    },
   },
   {
-    timestamps:true
+    timestamps: true,
+  }
+);
+
+const adminSchema = new mongoose.Schema(
+  {
+    username:{
+      type: String,
+      required: true
+    },
+    passwordHash:{
+      type:String,
+    }
   }
 )
 module.exports.Ingredient = mongoose.model("Ingredient", ingredientSchema);
 module.exports.Order = mongoose.model("Order", orderSchema);
 module.exports.OrderDone = mongoose.model("OrderDone", orderDoneSchema);
-module.exports.OrderProcessed = mongoose.model("OrderProcessed", orderProcessedSchema);
-module.exports.OrderSemaphore = mongoose.model("OrderSemaphore", orderSemaphoreSchema);
+module.exports.OrderProcessed = mongoose.model(
+  "OrderProcessed",
+  orderProcessedSchema
+);
+module.exports.OrderSemaphore = mongoose.model(
+  "OrderSemaphore",
+  orderSemaphoreSchema
+);
+module.exports.Admin = mongoose.model(
+  "Admin",
+  adminSchema
+)

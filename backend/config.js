@@ -23,6 +23,9 @@ const SIZE_TYPES = [SIZE_SMALL, SIZE_MEDIUM, SIZE_LARGE]
 
 const ORDERS_LIMIT = parseInt(process.env.ORDERS_LIMIT)
 
+const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET
+const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET
+
 module.exports.port = port
 module.exports.dbUri = dbUri
 module.exports.seedPath = seedPath
@@ -33,3 +36,5 @@ module.exports.ORDER_DONE = ORDER_DONE
 module.exports.SIZE_TYPES = SIZE_TYPES
 module.exports.ORDER_CANCELLED = ORDER_CANCELLED
 module.exports.ORDERS_LIMIT = ORDERS_LIMIT
+module.exports.ACCESS_TOKEN_SECRET = ACCESS_TOKEN_SECRET
+module.exports.REFRESH_TOKEN_SECRET = REFRESH_TOKEN_SECRET
