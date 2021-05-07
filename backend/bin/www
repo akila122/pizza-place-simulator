@@ -1,100 +1,95 @@
 #!/usr/bin/env node
 
-require("dotenv").config();
+require("dotenv").config()
 
-fs = require('fs')
-const { logInfo, logError } = require("../logger");
+fs = require("fs")
+const { logInfo, logError } = require("../logger")
 
-const app = require("../app");
-const http = require("http");
-const port = normalizePort(process.env.PORT || "3000");
+const app = require("../app")
+const http = require("http")
+const mongoose = require("mongoose")
 
-const dbUsername = process.env.DB_USERNAME;
-const dbPassword = process.env.DB_PASSWORD;
-const dbName = process.env.DB_NAME;
-const MongoClient = require("mongodb").MongoClient;
-const uri = `mongodb+srv://${dbUsername}:${dbPassword}@cluster0.s4l3j.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
-const client = new MongoClient(uri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+const { port, dbUri, seedPath, ORDERS_LIMIT } = require("../config")
+const { OrderSemaphore } = require("../models")
 
 async function main() {
   try {
-    await client.connect();
-    logInfo("Connected to DB");
+    await mongoose.connect(dbUri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      useFindAndModify: false,
+      useCreateIndex: true,
+    })
+    logInfo("Connected to DB")
 
-    db = client.db(dbName);
-    await seedIngredients();
+    await seedIngredients()
 
-    app.set("db", db);
-    app.set("port", port);
-    const server = http.createServer(app);
-    server.listen(port);
-    server.on("error", onError);
-    server.on("listening", onListening);
-    server.on("close", onClose);
+    await setupOrderLimit()
+
+    const db = mongoose.connection
+    app.set("db", db)
+    app.set("port", port)
+    const server = http.createServer(app)
+    server.listen(port)
+    server.on("error", onError)
+    server.on("listening", onListening)
+    server.on("close", onClose)
 
     process.on("SIGINT", function () {
-      server.close();
-    });
+      server.close()
+    })
   } catch (e) {
-    logError(e);
-    process.exit(2);
+    logError(e)
+    process.exit(2)
   }
-}
-function normalizePort(val) {
-  const port = parseInt(val, 10);
-
-  if (isNaN(port)) {
-    return val;
-  }
-
-  if (port >= 0) {
-    return port;
-  }
-
-  return false;
 }
 
 function onError(error) {
   if (error.syscall !== "listen") {
-    throw error;
+    throw error
   }
 
-  const bind = typeof port === "string" ? "Pipe " + port : "Port " + port;
+  const bind = typeof port === "string" ? "Pipe " + port : "Port " + port
 
   switch (error.code) {
     case "EACCES":
-      logError(bind + " requires elevated privileges");
-      process.exit(1);
+      logError(bind + " requires elevated privileges")
+      process.exit(1)
     case "EADDRINUSE":
-      logError(bind + " is already in use");
-      process.exit(1);
+      logError(bind + " is already in use")
+      process.exit(1)
     default:
-      throw error;
+      throw error
   }
 }
 
 function onClose() {
-  logInfo("Server closing");
-  client.close();
+  logInfo("Server closing")
+  mongoose.disconnect()
 }
 
 function onListening() {
-  logInfo("Server started");
+  logInfo("Server started")
 }
 
 async function seedIngredients() {
-  colinfo = await db.listCollections({name: "ingredients"}).next()
-  if (!colinfo) {
-    path = process.env.INGREDIENTS_SEED_PATH;
-    dataBuffer = fs.readFileSync(path);
-    ingredientsData = JSON.parse(dataBuffer);
-    await db.collection('ingredients').insertMany(ingredientsData);
-    logInfo("Ingredients insreted");
+  const Ingredient = require("../models").Ingredient
+  ingredients = await Ingredient.find({}).exec()
+  if (!ingredients.length) {
+    const dataBuffer = fs.readFileSync(seedPath)
+    const ingredientsData = JSON.parse(dataBuffer)
+    await Ingredient.collection.insertMany(ingredientsData)
+    logInfo("Ingredients insreted")
   }
-  return true
 }
 
-main();
+async function setupOrderLimit(){
+    orderSemaphore = await OrderSemaphore.findOne({}).exec()
+    if (!orderSemaphore){
+      orderSemaphore = new OrderSemaphore({count:ORDERS_LIMIT})
+      await orderSemaphore.save()
+      logInfo("Order semaphore insreted")
+    }
+}
+
+main()
