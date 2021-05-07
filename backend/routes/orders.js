@@ -5,13 +5,14 @@ const {
   PRICE_SIZE_DICT,
   TIME_SIZE_DICT,
 } = require("../config");
-const {
-  Order,
-  OrderDone,
-  OrderSemaphore,
-  Ingredient,
-} = require("../models");
+const { Order, OrderDone, OrderSemaphore, Ingredient } = require("../models");
 const router = express.Router();
+
+// GET all ingredients
+router.get("/ingredients", async function (req, res, next) {
+  let ingredients = await Ingredient.find({}).exec();
+  res.json(ingredients);
+});
 
 // GET recent orders
 router.get("/", async function (req, res, next) {
@@ -62,8 +63,8 @@ router.post("/", async function (req, res, next) {
       }
       price += ingredient.price;
       time += ingredient.time;
-      ingredient.demand ++
-      await ingredient.save()
+      ingredient.demand++;
+      await ingredient.save();
     }
     newOrder.time = time;
     newOrder.price = price;
@@ -77,7 +78,7 @@ router.post("/", async function (req, res, next) {
       waitTime += o.time;
       if (o._id == newOrder._id) break;
     }
-    res.json({count,waitTime});
+    res.json({ count, waitTime });
   } catch (e) {
     res.status(400);
     res.send(e);
@@ -142,8 +143,8 @@ router.patch("/:orderId", async function (req, res, next) {
         let ingredient = await Ingredient.findById(ingredientId).exec();
         order.price += ingredient.price;
         order.time += ingredient.time;
-        ingredient.demand ++
-        await ingredient.save()
+        ingredient.demand++;
+        await ingredient.save();
       }
       await order.save();
     }
